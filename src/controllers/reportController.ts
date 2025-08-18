@@ -10,12 +10,20 @@ export class ReportController {
 
       const report = await reportService.getPFReport(documentId, reportName);
       res.json(report);
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Failed to generate PF report', { error });
-      res.status(500).json({
+      
+      const status = error.status || 500;
+      const errorResponse: any = {
         error: 'Failed to generate report',
         message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      };
+
+      if (error.code) {
+        errorResponse.code = error.code;
+      }
+
+      res.status(status).json(errorResponse);
     }
   }
 
@@ -26,12 +34,20 @@ export class ReportController {
 
       const report = await reportService.getPJReport(documentId, reportName);
       res.json(report);
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Failed to generate PJ report', { error });
-      res.status(500).json({
+      
+      const status = error.status || 500;
+      const errorResponse: any = {
         error: 'Failed to generate report',
         message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      };
+
+      if (error.code) {
+        errorResponse.code = error.code;
+      }
+
+      res.status(status).json(errorResponse);
     }
   }
 }

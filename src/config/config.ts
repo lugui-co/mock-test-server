@@ -27,6 +27,10 @@ export const config = {
     max: parseInt(process.env.MAX_DELAY || '60000', 10),
   },
   
+  errors: {
+    chance: parseInt(process.env.ERROR_CHANCE_PERCENT || '15', 10), // 15% chance of random error
+  },
+  
   paths: {
     payloadPF: path.join(process.cwd(), 'payload-pf.json'),
     payloadPJ: path.join(process.cwd(), 'payload-pj.json'),
