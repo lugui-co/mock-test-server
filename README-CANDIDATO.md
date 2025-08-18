@@ -223,9 +223,6 @@ R: Consulte `curl-examples.md` para exemplos de uso.
 **P: Posso mudar a estrutura dos endpoints?**
 R: Os endpoints `/api/v1/consulta/cpf/{cpf}` e `/api/v1/consulta/cnpj/{cnpj}` são obrigatórios.
 
-**P: O mock tem rate limiting?**
-R: Sim, 100 requisições por 15 minutos. Sua aplicação deve lidar com HTTP 429.
-
 ---
 
 ## 🎯 Objetivo Final
