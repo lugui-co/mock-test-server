@@ -94,19 +94,7 @@ Novo `any` faz o lint falhar (passa de 12 warnings): tipifique. Cobertura abaixo
 Nenhuma. O serviço não chama APIs, bancos, filas, buckets ou Secrets Manager. É ele o "serviço
 externo" falso para os candidatos. Estado é só memória (tokens) e os dois JSON do disco.
 
-## 7. Dados reais (dev/prod)
-
-- Bancos Postgres da Lugui (`gestao`, `luguiapi`, `contracts`, `scheduler`): use o `lugui-db` (repo privado `lugui-co/lugui-db`;
-  instale com `uv tool install git+ssh://git@github.com/lugui-co/lugui-db.git && lugui-db instalar`, que também instala a skill
-  `lugui-dados` com o mapa dos bancos). `lugui-db bancos` mostra o que existe; leitura: `lugui-db dev <banco> "SELECT ..."`
-  (transação somente leitura garantida pelo banco).
-- Escrita só com `lugui-db ... --write --motivo "..."` (dev aplica; prod espera o ok do dono). Nunca monte túnel, Lambda de SQL ou `psql` à mão.
-- DynamoDB, logs e filas: AWS CLI só leitura, com `--profile dev|prod` explícito.
-- Dado de cliente (CPF, nome, telefone, e-mail, chave Pix) pode ser lido para analisar, mas nunca vai para arquivo, commit, PR ou issue.
-- Este repo não tem banco próprio (mock em memória para o desafio de candidatos): a seção vale para investigar dados dos
-  serviços reais da Lugui; nada lido lá entra nos `payload-*.json` daqui.
-
-## 8. Regras e limites
+## 7. Regras e limites
 
 - `package-lock.json` é versionado: mudou dependência, rode `npm install` e commite o lockfile junto. Não commitar `dist/`, `logs/`, `.env`, `coverage/` nem `node_modules/`.
 - Não colocar dados reais em `payload-*.json`: só sintéticos (CPF/CNPJ gerados com dígito válido, nomes fictícios). Não copiar números de documento para docs, commits ou PRs.
@@ -116,7 +104,7 @@ externo" falso para os candidatos. Estado é só memória (tokens) e os dois JSO
 - Não colocar valor de `JWT_SECRET` em arquivo versionado.
 - Não logar `Authorization`, documento completo nem body: use `sanitizeHeaders` (`requestLogger`).
 
-## 9. Armadilhas conhecidas
+## 8. Armadilhas conhecidas
 
 - `config` é lido **uma vez, no import**: mudar `process.env` dentro de um teste não tem efeito. Fixe env em `src/__tests__/env.ts` ou controle tempo/aleatoriedade com `jest.spyOn`.
 - `curl-examples.md` cita `test-curls.sh`, `test-rate-limit*.sh`; `README-CANDIDATO.md` cita `validate-challenge.sh`. Nenhum está versionado.
@@ -125,7 +113,7 @@ externo" falso para os candidatos. Estado é só memória (tokens) e os dois JSO
 - `docker-compose.yml` ainda tem `version: '3.8'` (aviso de obsoleto, inofensivo).
 - `src/index.ts` não exporta o `app` (monta e dá `listen` no import); por isso o teste de rotas remonta o encadeamento. Se mudar middlewares em `index.ts`, atualize `routes.test.ts`.
 
-## 10. Fatos do sistema real
+## 9. Fatos do sistema real
 
 - Login: `POST /security/iam/v1/client-identities/login` aceita **qualquer** `Authorization: Basic <algo>`; não confere usuário/senha. Resposta: `{ accessToken, tokenType: "Bearer", expiresIn: "3600", scope: ["read","write"] }` — `expiresIn` é **string**.
 - O token é base64 de `{ payload: { clientId, timestamp, expiryTimestamp }, hash }`, não é JWT (apesar do nome `JWT_SECRET`). Só vale se estiver no `Map` do processo.
