@@ -1,7 +1,7 @@
 # AGENTS.md — mock-test-server (Mock Serasa Server)
 
-Instruções para agentes de IA. Tudo aqui foi conferido em 2026-10-11 contra o código
-(commit `807a53b`) e rodando os comandos; o que não foi conferido está marcado.
+Instruções para agentes de IA. Tudo aqui foi conferido em 2026-10-11 contra o código e rodando os
+comandos (fase 2 de AI readiness, branch `docs/ai-readiness`); o que não foi conferido está marcado.
 
 ## 1. O que é
 
@@ -20,22 +20,23 @@ chama este mock. Ele não chama nenhum serviço externo; responde com os JSON fi
 - `src/services/reportService.ts` — lê os payloads do disco (`process.cwd()`), sorteia erro e atraso, troca o documento na resposta.
 - `src/middleware/` — `authMiddleware` (Bearer), `validation` (Joi para `reportName`/`X-Document-id`, Basic no login), `requestLogger`, `errorHandler`.
 - `src/types/index.ts` — interfaces de resposta/token. `src/utils/logger.ts` — Winston (arquivo só em `NODE_ENV=production`).
-- `src/__tests__/` — testes Jest (`*.test.ts`) e `setup.ts`.
-- `payload-pf.json`, `payload-pj.json` — respostas fixas (dados fictícios/embaralhados). Precisam estar no diretório de execução.
+- `src/__tests__/` — testes Jest (`<camada>/*.test.ts`), `env.ts` (env fictícia, roda antes dos imports) e `setup.ts` (silencia o logger, restaura mocks).
+- `payload-pf.json`, `payload-pj.json` — respostas fixas com dados **sintéticos** (CPF/CNPJ gerados, nomes fictícios). Precisam estar no diretório de execução.
 - `README-CANDIDATO.md`, `curl-examples.md` — material entregue ao candidato.
-- `Dockerfile`, `docker-compose.yml` — imagem multi-stage `node:20-alpine`.
-
-Não existem: CI (`.github/`), configuração do ESLint, configuração do Jest, `package-lock.json`, `.nvmrc`.
+- `Dockerfile`, `docker-compose.yml` — imagem multi-stage `node:20-alpine`, porta 3006.
+- `jest.config.js`, `.eslintrc.cjs`, `tsconfig.json` (typecheck, inclui testes), `tsconfig.build.json` (build, exclui testes).
+- `.github/workflows/ci.yml` — CI em PR e push na `master`.
+- `docs/architecture.md` — fluxo e decisões; `docs/ai-readiness.md` — avaliação.
 
 ## 3. Como rodar
 
-Runtime: Node 20 (o `Dockerfile` usa `node:20-alpine`; o README diz "20+"). Não há versão fixada no repo.
-Conferido com Node 20.20.2 via mise.
+Runtime: Node 20 (`.nvmrc`, `engines`, `packageManager: npm@10.8.2`; o `Dockerfile` usa `node:20-alpine`).
+Conferido com Node 20.20.2 via mise. Lockfile `package-lock.json` versionado.
 
 ```bash
-mise exec node@20 -- npm install          # ~20 s; gera package-lock.json (não versionado, não commitar)
-mise exec node@20 -- npm run build        # tsc -> dist/, < 1 s
-mise exec node@20 -- npm run dev          # tsx watch src/index.ts (não conferido em modo watch)
+mise exec node@20 -- npm ci               # ~45 s sem cache
+npm run build                             # tsc -p tsconfig.build.json -> dist/, ~1 s
+npm run dev                               # tsx watch src/index.ts (não conferido em modo watch)
 ```
 
 Rodar local sem esperar atraso nem erros aleatórios (conferido; responde em ms):
@@ -46,48 +47,37 @@ PORT=39006 MIN_DELAY=0 MAX_DELAY=0 ERROR_CHANCE_PERCENT=0 node dist/index.js
 curl -s localhost:39006/health
 ```
 
-Variáveis (só nomes; todas opcionais, defaults em `src/config/config.ts`; modelo em `.env.example`):
+Variáveis (só nomes; todas opcionais, defaults em `src/config/config.ts`; modelo comentado em `.env.example`):
 `PORT`, `NODE_ENV`, `JWT_SECRET`, `TOKEN_EXPIRY`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`,
 `LOG_LEVEL`, `LOG_DIR`, `MIN_DELAY`, `MAX_DELAY`, `ERROR_CHANCE_PERCENT`.
-`ERROR_CHANCE_PERCENT` (padrão 15) e `LOG_DIR` não aparecem na tabela do README.
 
-Docker: `docker compose config -q` valida (só aviso de `version` obsoleto). `docker compose up` **não foi
-conferido** e hoje deve falhar/ficar inacessível — ver Armadilhas.
+Docker (conferido): `docker build -t mock-serasa .` (~70 s) e
+`docker run -p 3006:3006 -e MIN_DELAY=0 -e MAX_DELAY=0 -e ERROR_CHANCE_PERCENT=0 mock-serasa` respondem em
+`localhost:3006/health`. `docker compose up` publica `3006:3006` (não executado; `docker compose config -q` ok).
 
 ## 4. Como testar
 
-Não há CI. Nenhum comando abaixo é exigido automaticamente em PR.
+O CI (`.github/workflows/ci.yml`) roda em todo PR exatamente isto, nesta ordem; rode antes de entregar:
 
 ```bash
-npm run typecheck   # tsc --noEmit — passa, < 1 s
-npm run build       # passa, < 1 s
-npm test            # FALHA hoje: 4 suítes, 0 testes (sem config do Jest/ts-jest)
-npm run lint        # FALHA hoje: ESLint 8 sem arquivo de configuração
+npm ci
+npm run typecheck   # tsc --noEmit (src + testes), ~1 s
+npm run lint        # ESLint, --max-warnings 12 (baseline de `any`), ~1 s
+npm run test:ci     # jest --ci --coverage, 40 testes, ~2 s, limites em jest.config.js
+npm run build       # ~1 s
 ```
 
-Para executar os testes de verdade sem alterar o repo (conferido, ~2,5 s):
+E um job `docker` constrói a imagem e faz smoke test em `/health`.
 
-```bash
-npx jest --preset ts-jest --testEnvironment node \
-  --setupFilesAfterEnv ./src/__tests__/setup.ts \
-  --testPathIgnorePatterns setup.ts dist
-```
+Um arquivo ou um teste: `npx jest src/__tests__/routes/routes.test.ts` ou `npx jest -t "<nome>"`.
 
-Resultado atual: 12 testes, 11 passam, 1 falha preexistente
-(`AuthService › validateToken › should reject an expired token`, ver Armadilhas).
-Rode `rm -rf dist` antes, ou mantenha `dist` no `--testPathIgnorePatterns`: o `tsc` compila
-`src/__tests__/setup.ts` para `dist/__tests__/`.
+Os testes não dependem de `.env`, fuso, rede ou sorte: `src/__tests__/env.ts` fixa `TZ=UTC`,
+`MIN_DELAY=MAX_DELAY=0`, `ERROR_CHANCE_PERCENT=0` e um `JWT_SECRET` fictício antes de qualquer import.
+Para testar erro aleatório, faça `jest.spyOn` em `shouldGenerateRandomError` e `Math.random`
+(ver `reportService.test.ts`). Para expiração, `jest.spyOn(Date, 'now')`.
+Rotas: `routes.test.ts` monta o mesmo encadeamento de `src/index.ts` (sem rate limit nem `listen`) e usa `supertest`.
 
-Um teste só (conferido): ponha o arquivo **antes** das flags (depois de `--testPathIgnorePatterns`
-ele vira padrão de exclusão) ou use `-t "<nome do teste>"`:
-
-```bash
-npx jest src/__tests__/middleware/authMiddleware.test.ts --preset ts-jest --testEnvironment node \
-  --setupFilesAfterEnv ./src/__tests__/setup.ts --testPathIgnorePatterns setup.ts dist
-```
-
-Antes de entregar uma mudança: `npm run typecheck`, `npm run build` e o comando Jest acima sem
-novas falhas. Teste manual com o servidor local (seção 3) e `curl` quando mexer em rotas.
+Novo `any` faz o lint falhar (passa de 12 warnings): tipifique. Cobertura abaixo dos limites faz `test:ci` falhar.
 
 ## 5. Convenções
 
@@ -96,8 +86,8 @@ novas falhas. Teste manual com o servidor local (seção 3) e `curl` quando mexe
 - Erros de negócio: lançar `Error` com `status` e `code`; o controller responde `{ error, message, code }` com esse status.
 - Logs com `logger` (Winston), nunca `console.log`. Mascarar documento ao logar (o `reportService` usa `substring(...) + '***'`).
 - Mensagens ao cliente misturam português (auth) e inglês (relatórios); preserve o texto existente, os candidatos dependem dele.
-- Testes: Jest em `src/__tests__/<camada>/<arquivo>.test.ts`, objetos `Request`/`Response` parciais com `jest.fn()`, `jest.mock('../../services/...')` para isolar camadas. `supertest` está instalado mas não é usado.
-- Commits: mensagens curtas em português, sem prefixo (ex.: "Melhorias"). Para novos commits prefira `tipo: descrição` em português. Branch padrão: `master`. Sem template de PR.
+- Testes: Jest em `src/__tests__/<camada>/<arquivo>.test.ts`, objetos `Request`/`Response` parciais com `jest.fn()`, `jest.mock('../../services/...')` para isolar camadas; integração HTTP com `supertest`. Serviços exportam a classe (`new ReportService()`) além do singleton. Documentos em teste: só sintéticos.
+- Commits: `tipo: descrição` em português (`ci:`, `test:`, `fix:`, `chore:`, `docs:`); os commits antigos não tinham prefixo. Branch padrão: `master`. Sem template de PR.
 
 ## 6. Integrações externas
 
@@ -106,26 +96,22 @@ externo" falso para os candidatos. Estado é só memória (tokens) e os dois JSO
 
 ## 7. Regras e limites
 
-- Não commitar `package-lock.json`, `dist/`, `logs/`, `.env` nem `node_modules/` sem pedido explícito (o lockfile não é versionado hoje; adicioná-lo é decisão humana).
-- Não colocar dados reais em `payload-*.json`: só dados fictícios. Não copiar números de documento desses arquivos para docs, commits ou PRs.
+- `package-lock.json` é versionado: mudou dependência, rode `npm install` e commite o lockfile junto. Não commitar `dist/`, `logs/`, `.env`, `coverage/` nem `node_modules/`.
+- Não colocar dados reais em `payload-*.json`: só sintéticos (CPF/CNPJ gerados com dígito válido, nomes fictícios). Não copiar números de documento para docs, commits ou PRs.
 - Mudar formato de resposta, rotas, códigos de status, nomes de header ou `reportName` quebra o desafio dos candidatos e o `validate-challenge.sh` (que não está versionado): exige confirmação humana.
 - Não alterar `README-CANDIDATO.md` sem pedido: é material enviado a candidatos.
 - Não há deploy no repo. Não publicar imagem nem subir o mock em ambiente compartilhado sem pedido.
 - Não colocar valor de `JWT_SECRET` em arquivo versionado.
+- Não logar `Authorization`, documento completo nem body: use `sanitizeHeaders` (`requestLogger`).
 
 ## 8. Armadilhas conhecidas
 
-- `npm test` não roda nada: não há `jest.config.js` (o README cita um que não existe) nem preset `ts-jest`, então o Babel falha no TypeScript. Use o comando da seção 4.
-- `npm run lint` falha: não há `.eslintrc*`. Plugins `@typescript-eslint` v6 estão instalados.
-- Teste de token expirado falha: ele muda `process.env.TOKEN_EXPIRY` depois do import, mas `config` já foi lido no import. Para testar expiração, controle o tempo (`jest.useFakeTimers`/`Date.now`) ou injete config.
-- `Dockerfile` usa `npm ci`, que exige `package-lock.json`; o lockfile não está versionado, então o build da imagem deve falhar (conferido: `npm ci` sem lockfile falha; `docker build` não executado).
-- `docker-compose.yml` publica `3009:3009` mas o app escuta em `PORT=3006`: a porta do host não alcança o app. README e candidatos esperam `localhost:3006`.
-- O README manda `cp .env.example .env`; o arquivo só passa a existir com este PR.
+- `config` é lido **uma vez, no import**: mudar `process.env` dentro de um teste não tem efeito. Fixe env em `src/__tests__/env.ts` ou controle tempo/aleatoriedade com `jest.spyOn`.
 - `curl-examples.md` cita `test-curls.sh`, `test-rate-limit*.sh`; `README-CANDIDATO.md` cita `validate-challenge.sh`. Nenhum está versionado.
-- `requestLogger` loga todos os headers (inclui `Authorization` e `X-Document-id` completos) e o body, contradizendo o mascaramento feito no `reportService`.
 - Rate limit é global e conta `/health`: 100 req por 15 min por IP com os defaults. Scripts de validação em loop recebem 429.
-- `tsc` emite `dist/__tests__/setup.js` porque o `exclude` só pega `*.test.ts`.
 - Tokens vivem em memória: reiniciar o processo invalida todos.
+- `docker-compose.yml` ainda tem `version: '3.8'` (aviso de obsoleto, inofensivo).
+- `src/index.ts` não exporta o `app` (monta e dá `listen` no import); por isso o teste de rotas remonta o encadeamento. Se mudar middlewares em `index.ts`, atualize `routes.test.ts`.
 
 ## 9. Fatos do sistema real
 
