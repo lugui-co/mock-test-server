@@ -1,4 +1,4 @@
-import { authService } from '../../services/authService';
+import { AuthService, authService } from '../../services/authService';
 
 describe('AuthService', () => {
   describe('generateToken', () => {
@@ -39,22 +39,46 @@ describe('AuthService', () => {
       expect(isValid).toBe(false);
     });
 
-    it('should reject an expired token', async () => {
-      // Mock the token expiry time to be in the past
-      const originalEnv = process.env.TOKEN_EXPIRY;
-      process.env.TOKEN_EXPIRY = '0';
+    it('should reject an expired token', () => {
+      // config é lido no import, então mudar TOKEN_EXPIRY aqui não teria efeito:
+      // controlamos o relógio em vez disso.
+      const now = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+      const { token, expiresIn } = authService.generateToken('test-client');
 
-      const clientId = 'test-client';
-      const { token } = authService.generateToken(clientId);
+      nowSpy.mockReturnValue(now + expiresIn * 1000 + 1);
 
-      // Wait a bit to ensure token is expired
-      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(authService.validateToken(token)).toBe(false);
+    });
 
-      const isValid = authService.validateToken(token);
-      expect(isValid).toBe(false);
+    it('should reject a tampered token (not issued by this process)', () => {
+      const { token } = authService.generateToken('test-client');
+      const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+      decoded.hash = '0'.repeat(64);
+      const tampered = Buffer.from(JSON.stringify(decoded)).toString('base64');
 
-      // Restore original env
-      process.env.TOKEN_EXPIRY = originalEnv;
+      expect(authService.validateToken(tampered)).toBe(false);
+    });
+
+    it('should accept a token sent without base64 padding', () => {
+      const { token } = authService.generateToken('padding-client');
+
+      expect(authService.validateToken(token.replace(/=+$/, ''))).toBe(true);
+    });
+  });
+
+  describe('cleanupExpiredTokens', () => {
+    it('should remove only expired tokens', () => {
+      const service = new AuthService();
+      const now = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+      const { expiresIn } = service.generateToken('old-client');
+      nowSpy.mockReturnValue(now + expiresIn * 1000 + 1);
+      service.generateToken('new-client');
+
+      service.cleanupExpiredTokens();
+
+      expect(service.getActiveTokenCount()).toBe(1);
     });
   });
 

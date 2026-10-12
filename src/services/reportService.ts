@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
 
-class ReportService {
+export class ReportService {
   private payloadPF: any = null;
   private payloadPJ: any = null;
 

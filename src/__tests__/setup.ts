@@ -1,13 +1,9 @@
-import dotenv from 'dotenv';
+import { logger } from '../utils/logger';
 
-dotenv.config({ path: '.env.test' });
+// Logs não poluem a saída dos testes (spies em logger.* continuam funcionando).
+logger.silent = true;
 
-beforeAll(() => {
-  console.log = jest.fn();
-  console.error = jest.fn();
-  console.warn = jest.fn();
-});
-
-afterAll(() => {
-  jest.clearAllMocks();
+afterEach(() => {
+  jest.restoreAllMocks();
+  jest.useRealTimers();
 });

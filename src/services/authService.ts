@@ -3,7 +3,7 @@ import { config } from '../config/config';
 import { TokenPayload, TokenData } from '../types';
 import { logger } from '../utils/logger';
 
-class AuthService {
+export class AuthService {
   private tokenStore: Map<string, TokenPayload> = new Map();
   private secretKey: string;
 
