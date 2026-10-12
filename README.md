@@ -7,10 +7,10 @@ Servidor mock modernizado para simular a API Serasa com TypeScript e melhores pr
 - ✅ TypeScript com tipagem completa
 - ✅ Arquitetura modular e escalável
 - ✅ Docker e Docker Compose
-- ✅ Autenticação JWT segura
+- ✅ Token Bearer assinado com HMAC SHA-256 (não é JWT)
 - ✅ Logging estruturado com Winston
 - ✅ Validação de requisições com Joi
-- ✅ Testes unitários com Jest
+- ✅ Testes unitários e de integração (Jest + supertest) e CI em PR
 - ✅ Middlewares de segurança (Helmet, CORS)
 - ✅ Compressão de respostas
 - ✅ Health check endpoint
@@ -18,7 +18,7 @@ Servidor mock modernizado para simular a API Serasa com TypeScript e melhores pr
 
 ## Pré-requisitos
 
-- Node.js 20+ (para desenvolvimento)
+- Node.js 20 (versão em `.nvmrc`; o Docker usa `node:20-alpine`)
 - Docker e Docker Compose (para produção)
 - Arquivos `payload-pf.json` e `payload-pj.json` no diretório raiz
 
@@ -27,27 +27,30 @@ Servidor mock modernizado para simular a API Serasa com TypeScript e melhores pr
 ### Desenvolvimento
 
 ```bash
-# Instalar dependências
-npm install
+# Instalar dependências (lockfile versionado)
+npm ci
 
 # Copiar arquivo de configuração
 cp .env.example .env
 
 # Executar em modo desenvolvimento
 npm run dev
+
+# Sem atraso nem erros aleatórios (respostas em ms)
+MIN_DELAY=0 MAX_DELAY=0 ERROR_CHANCE_PERCENT=0 npm run dev
 ```
 
 ### Produção com Docker
 
 ```bash
 # Construir e executar com Docker Compose
-docker-compose up -d
+docker compose up -d   # http://localhost:3006
 
 # Ver logs
-docker-compose logs -f
+docker compose logs -f
 
 # Parar servidor
-docker-compose down
+docker compose down
 ```
 
 ## Scripts Disponíveis
@@ -55,9 +58,10 @@ docker-compose down
 - `npm run dev` - Executa em modo desenvolvimento com hot reload
 - `npm run build` - Compila TypeScript para JavaScript
 - `npm start` - Executa servidor compilado
-- `npm test` - Executa testes unitários
+- `npm test` - Executa os testes (Jest + ts-jest, env fictícia em `src/__tests__/env.ts`)
 - `npm run test:coverage` - Executa testes com cobertura
-- `npm run lint` - Verifica código com ESLint
+- `npm run test:ci` - Testes com cobertura e limites mínimos (usado no CI)
+- `npm run lint` - Verifica código com ESLint (`.eslintrc.cjs`)
 - `npm run typecheck` - Verifica tipos TypeScript
 
 ## Endpoints
@@ -95,13 +99,15 @@ GET /health
 |----------|-----------|--------|
 | PORT | Porta do servidor | 3006 |
 | NODE_ENV | Ambiente (development/production) | development |
-| JWT_SECRET | Chave secreta para JWT | - |
+| JWT_SECRET | Chave HMAC dos tokens | default-secret-key |
 | TOKEN_EXPIRY | Tempo de expiração do token (segundos) | 3600 |
 | RATE_LIMIT_WINDOW_MS | Janela para rate limiting (ms) | 900000 |
 | RATE_LIMIT_MAX_REQUESTS | Máximo de requisições por janela | 100 |
 | LOG_LEVEL | Nível de log | info |
 | MIN_DELAY | Delay mínimo de resposta (ms) | 2000 |
 | MAX_DELAY | Delay máximo de resposta (ms) | 60000 |
+| ERROR_CHANCE_PERCENT | Chance (%) de erro aleatório nos relatórios | 15 |
+| LOG_DIR | Diretório dos logs em arquivo (só `NODE_ENV=production`) | logs |
 
 ## Estrutura do Projeto
 
@@ -119,13 +125,16 @@ GET /health
 ├── Dockerfile           # Imagem Docker
 ├── docker-compose.yml   # Orquestração Docker
 ├── package.json         # Dependências
-├── tsconfig.json        # Configuração TypeScript
-└── jest.config.js       # Configuração Jest
+├── tsconfig.json        # TypeScript (typecheck, inclui testes)
+├── tsconfig.build.json  # Build (exclui testes)
+├── jest.config.js       # Configuração Jest
+├── .eslintrc.cjs        # Configuração ESLint
+└── .github/workflows/ci.yml  # CI: typecheck, lint, testes, build, imagem Docker
 ```
 
 ## Segurança
 
-- Tokens JWT com HMAC SHA-256
+- Tokens assinados com HMAC SHA-256, guardados em memória
 - Rate limiting para prevenir abuso
 - Helmet para headers de segurança
 - Validação de entrada com Joi
@@ -138,3 +147,7 @@ GET /health
 - Logging estruturado com níveis configuráveis
 - Contagem de tokens ativos
 - Métricas de tempo de resposta nos logs
+
+## Arquitetura
+
+Ver [`docs/architecture.md`](docs/architecture.md).
