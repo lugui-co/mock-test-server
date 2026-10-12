@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Mock Serasa Server with best practices",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20 <21"
+  },
+  "packageManager": "npm@10.8.2",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",

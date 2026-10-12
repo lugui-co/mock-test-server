@@ -109,8 +109,6 @@ Thumbs.db
 # Jest
 jest.config.js.map
 
-# Docker
-.dockerignore
 
 # Temporary files
 *.tmp
