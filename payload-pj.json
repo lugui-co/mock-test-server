@@ -3,8 +3,8 @@
         {
             "reportName": "RELATORIO_BASICO_PJ_PME",
             "registration": {
-                "companyDocument": "06134846000109",
-                "companyName": "TRANSPORTADORA PRINT LTDA",
+                "companyDocument": "11222333000181",
+                "companyName": "TRANSPORTADORA EXEMPLO LTDA",
                 "foundationDate": "2004-03-02",
                 "statusRegistration": "SITUACAO DO CNPJ EM 10/05/2025: ATIVA",
                 "address": {
@@ -241,36 +241,36 @@
                     "results": [
                         {
                             "occurrenceDate": "2025-07-31",
-                            "companyName": "G10 TRANSPORTES S.A.",
-                            "companyDocumentId": "07569161000140",
+                            "companyName": "LOGISTICA FICTICIA S.A.",
+                            "companyDocumentId": "22333444000181",
                             "companyAlias": "G10 - TRANSPORTES",
                             "daysQuantity": 1
                         },
                         {
                             "occurrenceDate": "2025-07-30",
-                            "companyName": "SEM PARAR INSTITUICAO DE PAGAMENTO LTDA",
-                            "companyDocumentId": "04088208000165",
+                            "companyName": "PAGAMENTOS MODELO LTDA",
+                            "companyDocumentId": "33444555000181",
                             "companyAlias": "",
                             "daysQuantity": 2
                         },
                         {
                             "occurrenceDate": "2025-07-30",
-                            "companyName": "RAMA USINAGEM LTDA - ME",
-                            "companyDocumentId": "07848119000168",
+                            "companyName": "USINAGEM TESTE LTDA - ME",
+                            "companyDocumentId": "44555666000181",
                             "companyAlias": "",
                             "daysQuantity": 1
                         },
                         {
                             "occurrenceDate": "2025-07-29",
-                            "companyName": "BANCO DO BRASIL SA",
-                            "companyDocumentId": "00000000000191",
+                            "companyName": "BANCO FICTICIO S.A.",
+                            "companyDocumentId": "55666777000181",
                             "companyAlias": "DIRECAO GERAL",
                             "daysQuantity": 1
                         },
                         {
                             "occurrenceDate": "2025-07-29",
-                            "companyName": "ALIANCA SECURITIZADORA S.A.",
-                            "companyDocumentId": "19603334000188",
+                            "companyName": "SECURITIZADORA EXEMPLO S.A.",
+                            "companyDocumentId": "66777888000181",
                             "companyAlias": "SIVE SECURITIZADORA S.A.",
                             "daysQuantity": 1
                         }
@@ -299,15 +299,15 @@
                 "PartnerResponse": {
                     "results": [
                         {
-                            "documentId": "14784167000103",
-                            "name": "U CAN ADMINISTRADORA DE BENS S/A",
+                            "documentId": "77888999000181",
+                            "name": "ADMINISTRADORA FICTICIA DE BENS S/A",
                             "participationPercentage": 100.0,
                             "inconsistent": false,
                             "hasNegative": true
                         },
                         {
-                            "documentId": "28664053820",
-                            "name": "SERGIO DOS SANTOS BEZERRA",
+                            "documentId": "33366699957",
+                            "name": "FULANO DE TAL EXEMPLO",
                             "participationPercentage": 0.0,
                             "inconsistent": false,
                             "hasNegative": false
@@ -320,8 +320,8 @@
                     "results": [
                         {
                             "documentType": "CPF",
-                            "documentId": "28664053820",
-                            "name": "SERGIO DOS SANTOS BEZERRA",
+                            "documentId": "33366699957",
+                            "name": "FULANO DE TAL EXEMPLO",
                             "role": "ADMINISTR",
                             "hasNegative": false
                         }
